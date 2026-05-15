@@ -5,3 +5,5 @@ requests
 pytesseract
 pillow
 pdf2image
+google-auth
+google-api-python-client
