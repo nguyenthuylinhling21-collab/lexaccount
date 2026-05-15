@@ -13,7 +13,7 @@ DRIVE_FOLDER_ID = st.secrets["DRIVE_FOLDER_ID"]
 GOOGLE_CREDS = st.secrets["GOOGLE_CREDENTIALS"]
 
 genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel("gemini-2.0-flash")
+model = genai.GenerativeModel("gemini-1.5-flash")
 
 st.set_page_config(page_title="LexAccount", page_icon="⚖️", layout="wide")
 
