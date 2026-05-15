@@ -2,8 +2,6 @@ streamlit
 pymupdf
 python-docx
 requests
-pytesseract
-pillow
-pdf2image
 google-auth
 google-api-python-client
+google-generativeai
