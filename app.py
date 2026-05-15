@@ -8,7 +8,7 @@ from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 import google.generativeai as genai
 
-GEMINI_API_KEY = "AIzaSyBqmnr6arUe1RU9wekUsaN-jw5rkZ5x2tg"
+GEMINI_API_KEY = "AIzaSyCQHA63fqSMYox74A8b5QGwZfMVslIvj_Q"
 DRIVE_FOLDER_ID = st.secrets["DRIVE_FOLDER_ID"]
 GOOGLE_CREDS = st.secrets["GOOGLE_CREDENTIALS"]
 
