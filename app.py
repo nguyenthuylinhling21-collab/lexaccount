@@ -3,16 +3,19 @@ import fitz
 from docx import Document
 import os
 import requests
-import tempfile
+import io
+import json
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
-import io
-import json
+import google.generativeai as genai
 
-OPENROUTER_API_KEY = st.secrets["OPENROUTER_API_KEY"]
+GEMINI_API_KEY = "AIzaSyBqmnr6arUe1RU9wekUsaN-jw5rkZ5x2tg"
 DRIVE_FOLDER_ID = st.secrets["DRIVE_FOLDER_ID"]
 GOOGLE_CREDS = st.secrets["GOOGLE_CREDENTIALS"]
+
+genai.configure(api_key=GEMINI_API_KEY)
+model = genai.GenerativeModel("gemini-2.0-flash")
 
 st.set_page_config(page_title="LexAccount", page_icon="⚖️", layout="wide")
 
@@ -57,7 +60,7 @@ def list_drive_files():
     ).execute()
     return results.get("files", [])
 
-def download_file(file_id, filename):
+def download_file(file_id):
     service = get_drive_service()
     request = service.files().get_media(fileId=file_id)
     buf = io.BytesIO()
@@ -78,20 +81,13 @@ def file_to_text(buf, filename):
     return ""
 
 def ask_ai(prompt):
-    response = requests.post(
-        "https://openrouter.ai/api/v1/chat/completions",
-        headers={"Authorization": f"Bearer {OPENROUTER_API_KEY}"},
-        json={"model": "nvidia/nemotron-3-super-120b-a12b:free", "messages": [{"role": "user", "content": prompt}]}
-    )
-    result = response.json()
-    if "choices" in result:
-        return result["choices"][0]["message"]["content"]
-    return str(result)
+    response = model.generate_content(prompt)
+    return response.text
 
 def search_in_docs(keyword, files):
     results = []
     for f in files:
-        buf = download_file(f["id"], f["name"])
+        buf = download_file(f["id"])
         text = file_to_text(buf, f["name"])
         lines = text.split("\n")
         for i, line in enumerate(lines):
@@ -153,10 +149,10 @@ with tab1:
         auto_submit = question.strip() != "" and question != st.session_state.last_question
         st.session_state.last_question = question
         if (st.button("🔎 HỎI AI") or auto_submit) and question.strip() and selected_files:
-            with st.spinner("Đang tải và phân tích tài liệu..."):
+            with st.spinner("Đang phân tích tài liệu..."):
                 all_text = ""
                 for f in selected_files:
-                    buf = download_file(f["id"], f["name"])
+                    buf = download_file(f["id"])
                     text = file_to_text(buf, f["name"])
                     all_text += f"\n\n=== TÀI LIỆU: {f['name']} ===\n{text[:5000]}"
                 prompt = f"""Bạn là chuyên gia pháp luật kế toán tài chính Việt Nam.
@@ -203,7 +199,7 @@ with tab3:
         selected_file = next((f for f in files if f["name"] == selected_name), None)
         if selected_file:
             with st.spinner("Đang tải văn bản..."):
-                buf = download_file(selected_file["id"], selected_file["name"])
+                buf = download_file(selected_file["id"])
                 if selected_name.endswith(".pdf"):
                     doc = fitz.open(stream=buf.read(), filetype="pdf")
                     st.info(f"Tổng số trang: **{len(doc)}**")
