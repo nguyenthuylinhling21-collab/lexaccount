@@ -1,13 +1,11 @@
 import streamlit as st
 import fitz
 from docx import Document
-import os
 import requests
 import io
-import json
 from google.oauth2 import service_account
+from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
-from googleapiclient.http import MediaIoBaseDownload
 import google.generativeai as genai
 
 GEMINI_API_KEY = "AIzaSyBqmnr6arUe1RU9wekUsaN-jw5rkZ5x2tg"
@@ -43,12 +41,16 @@ if "last_question" not in st.session_state:
     st.session_state.last_question = ""
 
 @st.cache_resource
-def get_drive_service():
-    creds_dict = dict(GOOGLE_CREDS)
+def get_creds():
     creds = service_account.Credentials.from_service_account_info(
-        creds_dict,
+        dict(GOOGLE_CREDS),
         scopes=["https://www.googleapis.com/auth/drive.readonly"]
     )
+    return creds
+
+@st.cache_resource
+def get_drive_service():
+    creds = get_creds()
     return build("drive", "v3", credentials=creds)
 
 @st.cache_data(ttl=300)
@@ -61,15 +63,15 @@ def list_drive_files():
     return results.get("files", [])
 
 def download_file(file_id):
-    service = get_drive_service()
-    request = service.files().get_media(fileId=file_id)
-    buf = io.BytesIO()
-    downloader = MediaIoBaseDownload(buf, request)
-    done = False
-    while not done:
-        _, done = downloader.next_chunk()
-    buf.seek(0)
-    return buf
+    creds = get_creds()
+    if not creds.valid:
+        creds.refresh(Request())
+    headers = {"Authorization": f"Bearer {creds.token}"}
+    response = requests.get(
+        f"https://www.googleapis.com/drive/v3/files/{file_id}?alt=media",
+        headers=headers
+    )
+    return io.BytesIO(response.content)
 
 def file_to_text(buf, filename):
     if filename.endswith(".pdf"):
